@@ -1,0 +1,61 @@
+package repository
+
+import (
+	"errors"
+
+	"gorm.io/gorm"
+
+	"github.com/phamngocan2412/camera-be-v1/internal/models"
+	"github.com/phamngocan2412/camera-be-v1/internal/platform/db"
+)
+
+type UserRepository interface {
+	FindByEmail(email string) (*models.User, error)
+	FindByID(id int) (*models.User, error)
+	Create(user *models.User) error
+	Update(user *models.User) error
+}
+
+type GORMUserRepository struct {
+	db *gorm.DB
+}
+
+func NewGORMUserRepository(db *gorm.DB) *GORMUserRepository {
+	return &GORMUserRepository{db: db}
+}
+
+func (r *GORMUserRepository) FindByEmail(email string) (*models.User, error) {
+	var u db.User
+	if err := r.db.Where("email = ?", email).First(&u).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+	return &models.User{ID: int(u.ID), Email: u.Email, PasswordHash: u.PasswordHash}, nil
+}
+
+func (r *GORMUserRepository) FindByID(id int) (*models.User, error) {
+	var u db.User
+	if err := r.db.First(&u, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("user not found")
+		}
+		return nil, err
+	}
+	return &models.User{ID: int(u.ID), Email: u.Email, PasswordHash: u.PasswordHash}, nil
+}
+
+func (r *GORMUserRepository) Create(user *models.User) error {
+	gormUser := db.User{Email: user.Email, PasswordHash: user.PasswordHash}
+	if err := r.db.Create(&gormUser).Error; err != nil {
+		return err
+	}
+	user.ID = int(gormUser.ID)
+	return nil
+}
+
+func (r *GORMUserRepository) Update(user *models.User) error {
+	return r.db.Model(&db.User{ID: uint(user.ID)}).
+		Updates(map[string]interface{}{"email": user.Email, "password_hash": user.PasswordHash}).Error
+}

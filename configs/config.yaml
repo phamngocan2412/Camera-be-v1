@@ -1,0 +1,11 @@
+server:
+  port: ":8080"
+
+jwt:
+  secret: "super-secret-jwt-key-change-in-prod-2026"
+
+database:
+  url: "host=localhost user=postgres password=postgres dbname=camera_security port=5432 sslmode=disable"
+
+log:
+  level: "debug"   # debug, info, warn, error
