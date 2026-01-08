@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -79,6 +80,12 @@ func (r *GORMUserRepository) FindByID(id int) (*models.User, error) {
 		Email:         u.Email,
 		PasswordHash:  u.PasswordHash,
 		EmailVerified: u.EmailVerified,
+		FirstName:     u.FirstName,
+		LastName:      u.LastName,
+		PhoneNumber:   u.PhoneNumber,
+		CountryCode:   u.CountryCode,
+		CreatedAt:     u.CreatedAt,
+		UpdatedAt:     u.UpdatedAt,
 	}, nil
 }
 
@@ -113,15 +120,22 @@ func (r *GORMUserRepository) Create(user *models.User) error {
 }
 
 func (r *GORMUserRepository) Update(user *models.User) error {
-	return r.db.Model(&db.User{ID: uint(user.ID)}).
-		Updates(map[string]interface{}{
-			"email":          user.Email,
-			"password_hash":  user.PasswordHash,
-			"first_name":     user.FirstName,
-			"last_name":      user.LastName,
-			"phone_number":   user.PhoneNumber,
-			"country_code":   user.CountryCode,
-			"email_verified": user.EmailVerified,
-			"created_at":     user.CreatedAt,
-		}).Error
+	dbUser := db.User{
+		ID:            uint(user.ID),
+		Email:         user.Email,
+		PasswordHash:  user.PasswordHash,
+		FirstName:     user.FirstName,
+		LastName:      user.LastName,
+		PhoneNumber:   user.PhoneNumber,
+		CountryCode:   user.CountryCode,
+		EmailVerified: user.EmailVerified,
+		// UpdatedAt will be handled by GORM or we can set it explicitly
+		UpdatedAt: time.Now(),
+	}
+
+	// Use Save with Omit to prevent updating created_at.
+	// Save creates a new record if primary key is empty, or updates if it exists.
+	// Since we set ID, it updates.
+	// Using struct prevents map[string]interface{} allocation.
+	return r.db.Model(&dbUser).Omit("created_at").Save(&dbUser).Error
 }
